@@ -13,6 +13,7 @@
 import { getLastNMonthsIndices, getCurrentMonthIndex } from './dateUtils.js';
 import { detectBurnout } from './burnoutDetection.js';
 import { detectLoadBalancing } from './loadBalancingProtection.js';
+import { safeArrayAccess, safeAverage } from './dataValidation.js';
 
 /**
  * Calculate 6-month average (dynamically calculated from current date)
@@ -20,10 +21,24 @@ import { detectLoadBalancing } from './loadBalancingProtection.js';
  * @returns {number} Average of last 6 months
  */
 export function calculate6MonthAverage(monthlyHours) {
+  if (!Array.isArray(monthlyHours)) {
+    console.warn('[calculate6MonthAverage] Invalid monthlyHours: not an array');
+    return 0;
+  }
+
   const { startIndex, endIndex } = getLastNMonthsIndices(6);
-  const last6Months = monthlyHours.slice(startIndex, endIndex);
-  const sum = last6Months.reduce((a, b) => a + b, 0);
-  return last6Months.length > 0 ? sum / last6Months.length : 0;
+
+  // Ensure we don't slice beyond array bounds
+  const safeEndIndex = Math.min(endIndex, monthlyHours.length);
+  const safeStartIndex = Math.min(startIndex, monthlyHours.length);
+
+  if (safeStartIndex >= safeEndIndex) {
+    console.warn('[calculate6MonthAverage] Invalid date range or insufficient data');
+    return 0;
+  }
+
+  const last6Months = monthlyHours.slice(safeStartIndex, safeEndIndex);
+  return safeAverage(last6Months, 'calculate6MonthAverage');
 }
 
 /**
@@ -35,18 +50,35 @@ export function calculate6MonthAverage(monthlyHours) {
  * @returns {number} Growth rate as percentage
  */
 export function calculateGrowthRate(monthlyHours, currentMonthIndex) {
-  // Current month value
-  const currentMonth = monthlyHours[currentMonthIndex] || 0;
+  if (!Array.isArray(monthlyHours)) {
+    console.warn('[calculateGrowthRate] Invalid monthlyHours: not an array');
+    return 0;
+  }
+
+  // Current month value with bounds checking
+  const currentMonth = safeArrayAccess(
+    monthlyHours,
+    currentMonthIndex,
+    0,
+    'calculateGrowthRate:currentMonth'
+  );
 
   // Historical average: last 6 months EXCLUDING current month
   // This gives a stable baseline of their typical pattern
   const historicalStartIndex = Math.max(0, currentMonthIndex - 6);
   const historicalEndIndex = currentMonthIndex; // Exclusive of current month
 
-  const historicalMonths = monthlyHours.slice(historicalStartIndex, historicalEndIndex);
-  const historicalAvg = historicalMonths.length > 0
-    ? historicalMonths.reduce((a, b) => a + b, 0) / historicalMonths.length
-    : 0;
+  // Ensure we don't slice beyond array bounds
+  const safeEndIndex = Math.min(historicalEndIndex, monthlyHours.length);
+  const safeStartIndex = Math.min(historicalStartIndex, monthlyHours.length);
+
+  if (safeStartIndex >= safeEndIndex) {
+    // No historical data available
+    return currentMonth > 0 ? 100 : 0; // New clinician with first month of data
+  }
+
+  const historicalMonths = monthlyHours.slice(safeStartIndex, safeEndIndex);
+  const historicalAvg = safeAverage(historicalMonths, 'calculateGrowthRate:historical');
 
   // If no historical data, check if current month has data
   if (historicalAvg === 0) {
@@ -63,44 +95,84 @@ export function calculateGrowthRate(monthlyHours, currentMonthIndex) {
  * Enrich clinician data with all assignment metrics
  */
 export function enrichWithAssignmentMetrics(cliniciansData) {
+  if (!Array.isArray(cliniciansData) || cliniciansData.length === 0) {
+    console.warn('[enrichWithAssignmentMetrics] Invalid or empty cliniciansData');
+    return [];
+  }
+
   const currentMonthIndex = getCurrentMonthIndex();
 
   // First pass: calculate individual metrics
   const enrichedData = cliniciansData.map(clinician => {
-    const monthlyHours = clinician.monthlyHours2025;
+    try {
+      const monthlyHours = clinician.monthlyHours2025;
 
-    // Current month (dynamically calculated)
-    const currentMonth = monthlyHours[currentMonthIndex] || 0;
+      if (!Array.isArray(monthlyHours)) {
+        console.error(`[enrichWithAssignmentMetrics] Invalid monthlyHours for ${clinician.name}`);
+        return {
+          ...clinician,
+          currentMonth: 0,
+          sixMonthAverage: 0,
+          growthRate: 0,
+          burnout: { burnoutLevel: 'none', consecutiveMonths: 0, penalty: 0 }
+        };
+      }
 
-    // 6-month average (dynamically calculated)
-    const sixMonthAvg = calculate6MonthAverage(monthlyHours);
+      // Current month (dynamically calculated) with bounds checking
+      const currentMonth = safeArrayAccess(
+        monthlyHours,
+        currentMonthIndex,
+        0,
+        `enrichWithAssignmentMetrics:${clinician.name}:currentMonth`
+      );
 
-    // Growth rate (current month vs individual historical baseline - dynamically calculated)
-    const growthRate = calculateGrowthRate(monthlyHours, currentMonthIndex);
+      // 6-month average (dynamically calculated)
+      const sixMonthAvg = calculate6MonthAverage(monthlyHours);
 
-    // Burnout detection (consecutive high-load months)
-    const burnoutInfo = detectBurnout(monthlyHours, currentMonthIndex);
+      // Growth rate (current month vs individual historical baseline - dynamically calculated)
+      const growthRate = calculateGrowthRate(monthlyHours, currentMonthIndex);
 
-    return {
-      ...clinician,
-      currentMonth: Number(currentMonth.toFixed(1)),
-      sixMonthAverage: Number(sixMonthAvg.toFixed(1)),
-      growthRate: Number(growthRate.toFixed(1)),
-      burnout: burnoutInfo
-    };
+      // Burnout detection (consecutive high-load months)
+      const burnoutInfo = detectBurnout(monthlyHours, currentMonthIndex);
+
+      return {
+        ...clinician,
+        currentMonth: Number(currentMonth.toFixed(1)),
+        sixMonthAverage: Number(sixMonthAvg.toFixed(1)),
+        growthRate: Number(growthRate.toFixed(1)),
+        burnout: burnoutInfo
+      };
+    } catch (error) {
+      console.error(`[enrichWithAssignmentMetrics] Error processing ${clinician.name}:`, error);
+      return {
+        ...clinician,
+        currentMonth: 0,
+        sixMonthAverage: 0,
+        growthRate: 0,
+        burnout: { burnoutLevel: 'none', consecutiveMonths: 0, penalty: 0 }
+      };
+    }
   });
 
   // Second pass: detect load balancing needs (requires all clinicians for ranking)
   return enrichedData.map(clinician => {
-    const loadBalancingInfo = detectLoadBalancing(
-      clinician.monthlyHours2025,
-      enrichedData,
-      currentMonthIndex
-    );
+    try {
+      const loadBalancingInfo = detectLoadBalancing(
+        clinician.monthlyHours2025,
+        enrichedData,
+        currentMonthIndex
+      );
 
-    return {
-      ...clinician,
-      loadBalancing: loadBalancingInfo
-    };
+      return {
+        ...clinician,
+        loadBalancing: loadBalancingInfo
+      };
+    } catch (error) {
+      console.error(`[enrichWithAssignmentMetrics] Error in load balancing for ${clinician.name}:`, error);
+      return {
+        ...clinician,
+        loadBalancing: { isOutlier: false, consecutiveMonths: 0, penalty: 0 }
+      };
+    }
   });
 }

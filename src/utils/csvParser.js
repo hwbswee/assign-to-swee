@@ -42,7 +42,7 @@ const displayNames = {
 /**
  * Parse CSV text into an array of objects with validation
  * @param {string} csvText - Raw CSV text
- * @returns {Object} Parsed data with validation results
+ * @returns {Object} Parsed data with validation results and optional timestamp
  */
 function parseCSV(csvText) {
   const lines = csvText.trim().split('\n');
@@ -52,7 +52,20 @@ function parseCSV(csvText) {
     throw new Error('CSV file is empty');
   }
 
-  const headers = lines[0].split(',').map(h => h.trim());
+  // Check for timestamp comment on first line
+  let timestamp = null;
+  let startIndex = 0;
+
+  if (lines[0].startsWith('#')) {
+    const timestampMatch = lines[0].match(/# Data last updated: (.+)/);
+    if (timestampMatch) {
+      timestamp = timestampMatch[1].trim();
+      console.log('CSV timestamp found:', timestamp);
+    }
+    startIndex = 1; // Skip the comment line
+  }
+
+  const headers = lines[startIndex].split(',').map(h => h.trim());
 
   console.log('CSV Headers:', headers);
   console.log('Active Cases column name:', headers[headers.length - 1]);
@@ -68,7 +81,7 @@ function parseCSV(csvText) {
   const allWarnings = [];
   const allErrors = [];
 
-  for (let i = 1; i < lines.length; i++) {
+  for (let i = startIndex + 1; i < lines.length; i++) {
     // Skip empty lines
     if (!lines[i] || lines[i].trim() === '') {
       console.warn(`Skipping empty line at row ${i + 1}`);
@@ -113,7 +126,8 @@ function parseCSV(csvText) {
   return {
     data,
     warnings: allWarnings,
-    errors: allErrors
+    errors: allErrors,
+    timestamp
   };
 }
 
@@ -135,7 +149,7 @@ export async function fetchClinicianData() {
     }
 
     const parseResult = parseCSV(csvText);
-    const { data: parsedData, warnings, errors } = parseResult;
+    const { data: parsedData, warnings, errors, timestamp } = parseResult;
 
     // If there are critical errors and no data, throw
     if (parsedData.length === 0 && errors.length > 0) {
@@ -241,7 +255,10 @@ export async function fetchClinicianData() {
     }
 
     console.log('Parsed clinicians data:', cliniciansData);
-    return cliniciansData;
+    return {
+      clinicians: cliniciansData,
+      lastUpdated: timestamp
+    };
   } catch (error) {
     console.error('Error fetching clinician data:', error);
     throw new Error(`Failed to load clinician data: ${error.message}`);

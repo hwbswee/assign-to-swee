@@ -75,7 +75,12 @@ const ClinicianCard = ({ clinician, rank }) => {
                 {burnout.burnoutLevel === 'warning' && 'High Load Warning'}
                 {burnout.burnoutLevel === 'caution' && 'Load Caution'}
               </strong>
-              <span>{burnout.consecutiveHighMonths} consecutive high months (Protection: +{burnout.penalty} pts)</span>
+              <span>
+                {burnout.consecutiveHighMonths} consecutive months ≥{burnout.threshold}h (1.25× their avg, capped at 45h)
+              </span>
+              <span style={{ fontSize: '0.8em', display: 'block', marginTop: '0.25rem', fontStyle: 'italic' }}>
+                +{burnout.penalty} points added to protect from overwork
+              </span>
             </div>
           </div>
         )}

@@ -219,7 +219,7 @@ function App() {
                   <div className="formula-intro">
                     <h3 className="formula-title">How Assignment Scores Work</h3>
                     <p className="formula-description">
-                      <p>Lower scores indicate better candidates for new assignments.</p> 
+                      <p>Lower scores indicate possible therapists for new assignments.</p> 
                       <p>Each score is calculated using 4 weighted metrics.</p>
                     </p>
                   </div>

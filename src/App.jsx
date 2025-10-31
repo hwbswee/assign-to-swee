@@ -278,7 +278,7 @@ function App() {
                     </h4>
                     <div style={{ fontSize: '0.875rem', color: '#4b5563', lineHeight: '1.6' }}>
                       <p style={{ marginBottom: '0.5rem' }}>
-                        <strong>Load Caution:</strong> Points added when a clinician works ≥1.25× their own average for 2+ consecutive months (capped at 45h). Protects against individual burnout.
+                        <strong>Load Caution:</strong> +3 to +15 points added when a clinician works ≥1.25× their own average for 2+ consecutive months (capped at 45h). Protects against individual burnout.
                       </p>
                       <p style={{ marginBottom: 0 }}>
                         <strong>Load Balancing:</strong> Points added when a clinician is 1.5 standard deviations above the team average for 2+ consecutive months. Uses statistical analysis across all clinicians to identify and protect outliers carrying disproportionate workload.

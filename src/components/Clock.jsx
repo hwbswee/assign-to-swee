@@ -1,5 +1,4 @@
 import React, { useState, useEffect } from 'react';
-import { getCurrentMonthName, getCurrentYear } from '../utils/dateUtils.js';
 
 const Clock = () => {
   const [currentTime, setCurrentTime] = useState(new Date());
@@ -32,16 +31,10 @@ const Clock = () => {
     return date.toLocaleTimeString('en-US', options);
   };
 
-  // Get current month and year dynamically
-  const currentMonth = getCurrentMonthName();
-  const currentYear = getCurrentYear();
-  const dataDate = `Data: ${currentMonth} ${currentYear}`;
-
   return (
     <div className="clock-container">
       <div className="clock-time">{formatTime(currentTime)}</div>
       <div className="clock-date">{formatDate(currentTime)}</div>
-      <div className="data-updated">{dataDate}</div>
     </div>
   );
 };

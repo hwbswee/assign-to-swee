@@ -1,7 +1,9 @@
 /**
  * Calculate rolling averages for clinicians
- * Provides a more stable view of workload over sustained periods
+ * Provides a more stable view of assignment over sustained periods
  */
+
+import { getCurrentMonthIndex, getGrowthComparisonIndices } from './dateUtils.js';
 
 /**
  * Calculate 3-month rolling average
@@ -25,13 +27,19 @@ export function calculateRollingAverage(monthlyHours, endIndex) {
 
 /**
  * Add rolling average fields to clinician data
- * Recent: Average of last 3 months (Aug, Sep, Oct 2025) - indices 7, 8, 9
- * Previous: Average of 3 months before (May, Jun, Jul 2025) - indices 4, 5, 6
+ * Recent and previous periods calculated dynamically based on current date
  */
 export function enrichWithRollingAverages(cliniciansData) {
+  const currentMonthIndex = getCurrentMonthIndex();
+  const { recent, previous } = getGrowthComparisonIndices(3);
+
   return cliniciansData.map(clinician => {
-    const recentAvg = calculateRollingAverage(clinician.monthlyHours2025, 9); // Oct is index 9
-    const previousAvg = calculateRollingAverage(clinician.monthlyHours2025, 6); // Jul is index 6
+    // Recent 3 months average (ending at current month)
+    const recentAvg = calculateRollingAverage(clinician.monthlyHours2025, currentMonthIndex);
+
+    // Previous 3 months average (ending 3 months before current)
+    const previousEndIndex = previous.endIndex - 1; // -1 because endIndex is exclusive in slice
+    const previousAvg = calculateRollingAverage(clinician.monthlyHours2025, previousEndIndex);
 
     return {
       ...clinician,

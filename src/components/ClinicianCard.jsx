@@ -1,9 +1,7 @@
 import React from 'react';
 
 const ClinicianCard = ({ clinician, rank }) => {
-  const { name, fullName, level, currentMonth, sixMonthAverage, growthRate, activeCases, assignmentScore, recommendationLevel } = clinician;
-
-  const displayName = fullName || name;
+  const { name, level, currentMonth, sixMonthAverage, growthRate, activeCases, assignmentScore, recommendationLevel, burnout, loadBalancing } = clinician;
 
   const getGrowthIndicator = () => {
     if (growthRate > 10) return { text: '↑ Growing', class: 'growth-up' };
@@ -28,7 +26,7 @@ const ClinicianCard = ({ clinician, rank }) => {
       <div className="card-header">
         <div className="rank-badge">#{rank}</div>
         <div className="clinician-info">
-          <h3 className="clinician-name">{displayName}</h3>
+          <h3 className="clinician-name">{name}</h3>
           <span className="clinician-level">{level}</span>
         </div>
         {getRecommendationBadge()}
@@ -36,26 +34,26 @@ const ClinicianCard = ({ clinician, rank }) => {
 
       <div className="card-body">
         <div className="stat-grid">
-          <div className="stat-item" title="Current caseload: Clients seen in last 2 months (40% weight)">
+          <div className="stat-item" title="Current caseload: Clients seen in last 2 months (30% weight)">
             <span className="stat-label">Active Cases</span>
             <span className="stat-value">{activeCases}</span>
           </div>
-          <div className="stat-item" title="Current month clinical hours - October 2025 (25% weight)">
+          <div className="stat-item" title="Current month clinical hours (30% weight)">
             <span className="stat-label">Current Month</span>
             <span className="stat-value">{currentMonth}h</span>
           </div>
-          <div className="stat-item" title="6-month average: May-Oct 2025 (25% weight)">
+          <div className="stat-item" title="6-month average hours (30% weight)">
             <span className="stat-label">6-Month Avg</span>
             <span className="stat-value">{sixMonthAverage}h</span>
           </div>
-          <div className="stat-item" title={`Workload trajectory: ${growthRate > 0 ? 'increasing' : growthRate < 0 ? 'decreasing' : 'stable'} (${growthRate.toFixed(1)}% - 10% weight)`}>
+          <div className="stat-item" title={`Current month vs their historical average: ${growthRate > 0 ? `+${growthRate.toFixed(1)}% above typical` : growthRate < 0 ? `${growthRate.toFixed(1)}% below typical` : 'at typical level'} (10% weight)`}>
             <span className="stat-label">Trend</span>
             <span className={`stat-value ${growth.class}`}>{growth.text}</span>
           </div>
         </div>
 
         <div className="score-section">
-          <div className="score-label">Workload Score</div>
+          <div className="score-label">Assignment Score</div>
           <div className="score-bar-container">
             <div
               className={`score-bar score-bar-${recommendationLevel}`}
@@ -66,8 +64,30 @@ const ClinicianCard = ({ clinician, rank }) => {
         </div>
 
         <div className="score-explanation">
-          Lower score = Lower current workload = Better candidate
+          Lower score = Higher assignment priority
         </div>
+
+        {burnout && burnout.burnoutLevel !== 'none' && (
+          <div className={`protection-warning burnout-${burnout.burnoutLevel}`}>
+            <div className="protection-text">
+              <strong>
+                {burnout.burnoutLevel === 'severe' && 'Burnout Risk'}
+                {burnout.burnoutLevel === 'warning' && 'High Load Warning'}
+                {burnout.burnoutLevel === 'caution' && 'Load Caution'}
+              </strong>
+              <span>{burnout.consecutiveHighMonths} consecutive high months (Protection: +{burnout.penalty} pts)</span>
+            </div>
+          </div>
+        )}
+
+        {loadBalancing && loadBalancing.protectionLevel !== 'none' && (
+          <div className={`protection-warning load-balancing-${loadBalancing.protectionLevel}`}>
+            <div className="protection-text">
+              <strong>Load Balancing Protection</strong>
+              <span>{loadBalancing.consecutiveHighLoadMonths} consecutive months at 1.5+ SD above mean hours (Protection: +{loadBalancing.penalty} pts)</span>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );

@@ -1,21 +1,24 @@
 /**
  * Calculate weighted assignment score for clinicians
- * Lower score = better candidate for assignment (less workload)
+ * Lower score = better candidate for assignment (less assignment)
  *
  * FAIR SCORING FORMULA:
- * - Active Cases: 40% (current caseload reality - most important)
- * - Current Month: 25% (what's happening RIGHT NOW - October 2025)
- * - 6-Month Average: 25% (sustained pattern - May to October 2025)
- * - Growth Rate: 10% (workload trajectory - increasing or decreasing)
+ * - Active Cases: 30% (current caseload reality)
+ * - Current Month: 30% (what's happening RIGHT NOW)
+ * - 6-Month Average: 30% (sustained pattern - dynamically calculated)
+ * - Growth Rate: 10% (current month vs their own historical baseline - individualized fairness)
  *
  * NOTE: Normalized across ALL clinicians (not just within level)
  * This ensures leads with 2 cases score lower than juniors with 25 cases
  */
 
-export function calculateAssignmentScore(clinician, allClinicians) {
+export function calculateAssignmentScore(clinician, allClinicians, baselineMaxActiveCases = null) {
   // Find max values for normalization ACROSS ALL CLINICIANS
   // This makes scores comparable across levels
-  const maxActiveCases = Math.max(...allClinicians.map(c => c.activeCases), 1);
+  // Use baselineMaxActiveCases if provided (for time window adjustments)
+  const maxActiveCases = baselineMaxActiveCases !== null
+    ? baselineMaxActiveCases
+    : Math.max(...allClinicians.map(c => c.activeCases), 1);
   const maxCurrentMonth = Math.max(...allClinicians.map(c => c.currentMonth), 1);
   const maxSixMonthAvg = Math.max(...allClinicians.map(c => c.sixMonthAverage), 1);
 
@@ -37,14 +40,19 @@ export function calculateAssignmentScore(clinician, allClinicians) {
     : 0;
 
   // Weighted score (lower is better for assignment)
-  const score = (
-    normalizedActiveCases * 0.40 +    // 40% weight
-    normalizedCurrentMonth * 0.25 +    // 25% weight
-    normalizedSixMonthAvg * 0.25 +     // 25% weight
+  const baseScore = (
+    normalizedActiveCases * 0.30 +    // 30% weight
+    normalizedCurrentMonth * 0.30 +    // 30% weight
+    normalizedSixMonthAvg * 0.30 +     // 30% weight
     normalizedGrowthRate * 0.10        // 10% weight
   ) * 100;
 
-  return Math.round(score);
+  // Apply protection penalties (if detected)
+  const burnoutPenalty = clinician.burnout ? clinician.burnout.penalty : 0;
+  const loadBalancingPenalty = clinician.loadBalancing ? clinician.loadBalancing.penalty : 0;
+  const finalScore = baseScore + burnoutPenalty + loadBalancingPenalty;
+
+  return Math.round(Math.min(finalScore, 100)); // Cap at 100
 }
 
 export function getRecommendationLevel(score) {

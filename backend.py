@@ -21,14 +21,24 @@ clinical_types = [
 	'Client Contact',
 	'Communication (External)',
 	'Communication (Internal)',
-	'Communication (Respondent)'
+	'Communication (Respondent)',
+	# Accompaniment types
+	'Accompaniment (Faculty/HRP)',
+	'Accompaniment (Medical)',
+	'Accompaniment (NUS Adjudication)',
+	'Accompaniment (NUS Investigation)',
+	'Accompaniment (Other)',
+	'Accompaniment (Police)',
+	# MHRTW types
+	'MHRTW-Accompaniment',
+	'MHRTW-Communication'
 ]
 
 
 # List of current clinicians
 current_clinicians = [
 	'Andrew Lim', 'Claudia Stefanie', 'Dominic Yeo', 'Goh Zhengqin', 'Haikel',
-	'Kirsty Png', 'Leong Yee Teng Janice', 'Ng Xiao Hui', 'Oliver Tan',
+	'John Leow', 'Kirsty Png', 'Leong Yee Teng Janice', 'Ng Xiao Hui', 'Oliver Tan',
 	'Seanna Neo', 'Soon Jiaying', 'Tan Siew Kei Joanna Ashley'
 ]
 
@@ -49,18 +59,6 @@ attended_df = df[
 	df['a_schedule'].isin(current_clinicians) &
 	df['a_codedescription'].isin(clinical_types)
 ].copy()
-
-clinical_types = [
-	'Wellbeing Individual Check-In',
-	'Wellbeing Individual Counselling Session',
-	'Couples Counselling',
-	'Crisis',
-	'Groupwork',
-	'Client Contact',
-	'Communication (External)',
-	'Communication (Internal)',
-	'Communication (Respondent)'
-]
 
 # Convert a_date to datetime (handle single/double digit day/month)
 attended_df['a_date'] = pd.to_datetime(attended_df['a_date'], dayfirst=True, errors='coerce')

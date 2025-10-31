@@ -1,19 +1,64 @@
-import React, { useState, useMemo } from 'react';
-import { cliniciansData, levelLabels } from './data/clinicians';
+import React, { useState, useMemo, useEffect } from 'react';
+import { fetchClinicianData, levelLabels } from './utils/csvParser';
 import { calculateAssignmentScore, getRecommendationLevel, sortByAssignmentScore } from './utils/scoring';
-import { enrichWithWorkloadMetrics } from './utils/workloadMetrics';
+import { enrichWithAssignmentMetrics } from './utils/assignmentMetrics';
+import { getCurrentMonthName, getCurrentYear, get6MonthAverageLabel } from './utils/dateUtils';
 import ClinicianCard from './components/ClinicianCard';
-import WorkloadGraph from './components/WorkloadGraph';
+import AssignmentGraph from './components/AssignmentGraph';
 import Clock from './components/Clock';
 
 function App() {
   const [selectedLevel, setSelectedLevel] = useState('all');
+  const [cliniciansData, setCliniciansData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [timeWindow, setTimeWindow] = useState(2); // Default 2 months
+
+  // Fetch clinician data from CSV on component mount
+  useEffect(() => {
+    async function loadData() {
+      try {
+        setLoading(true);
+        const data = await fetchClinicianData();
+        setCliniciansData(data);
+        setError(null);
+      } catch (err) {
+        setError('Failed to load clinician data. Please refresh the page.');
+        console.error('Error loading data:', err);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadData();
+  }, []);
 
   // Calculate scores for all clinicians with new fair formula
   const cliniciansWithScores = useMemo(() => {
-    const enrichedData = enrichWithWorkloadMetrics(cliniciansData);
-    return enrichedData.map(clinician => {
-      const assignmentScore = calculateAssignmentScore(clinician, enrichedData);
+    if (cliniciansData.length === 0) return [];
+
+    const enrichedData = enrichWithAssignmentMetrics(cliniciansData);
+
+    // Calculate baseline (2 months) for normalization - FIXED baseline
+    // This ensures time window changes have meaningful impact
+    const baselineMaxActiveCases = Math.max(...enrichedData.map(c => c.activeCases), 1);
+
+    // Adjust active cases based on time window (proportional scaling from 2 months baseline)
+    // Using square root scaling to account for client overlap (not perfectly linear)
+    const scaleFactor = Math.sqrt(timeWindow / 2);
+    console.log(`Time window: ${timeWindow} months, Scale factor: ${scaleFactor.toFixed(3)}`);
+
+    const adjustedData = enrichedData.map(clinician => {
+      const adjustedActiveCases = Math.round(clinician.activeCases * scaleFactor);
+      return {
+        ...clinician,
+        activeCases: adjustedActiveCases
+      };
+    });
+
+    // Pass baseline max for normalization so scores change meaningfully with time window
+    const result = adjustedData.map(clinician => {
+      const assignmentScore = calculateAssignmentScore(clinician, adjustedData, baselineMaxActiveCases);
       const recommendationLevel = getRecommendationLevel(assignmentScore);
       return {
         ...clinician,
@@ -21,7 +66,14 @@ function App() {
         recommendationLevel
       };
     });
-  }, []);
+
+    // Debug: Log first clinician to verify changes
+    if (result.length > 0) {
+      console.log(`Sample: ${result[0].name} - Active Cases: ${result[0].activeCases}, Score: ${result[0].assignmentScore}`);
+    }
+
+    return result;
+  }, [cliniciansData, timeWindow]);
 
   // Filter and sort clinicians
   const filteredClinicians = useMemo(() => {
@@ -34,6 +86,56 @@ function App() {
   const selectLevel = (level) => {
     setSelectedLevel(level);
   };
+
+  // Show loading state
+  if (loading) {
+    return (
+      <div className="app">
+        <header className="app-header">
+          <div className="header-content">
+            <div className="header-left">
+              <h1 className="app-title">Assign to Who?</h1>
+              <p className="app-subtitle">Fair assignment-based recommendations</p>
+            </div>
+            <Clock />
+          </div>
+        </header>
+        <div className="container">
+          <div className="empty-state">
+            <p>Loading clinician data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="app">
+        <header className="app-header">
+          <div className="header-content">
+            <div className="header-left">
+              <h1 className="app-title">Assign to Who?</h1>
+              <p className="app-subtitle">Fair assignment-based recommendations</p>
+            </div>
+            <Clock />
+          </div>
+        </header>
+        <div className="container">
+          <div className="empty-state">
+            <p style={{ color: '#ef4444' }}>{error}</p>
+            <button
+              onClick={() => window.location.reload()}
+              style={{ marginTop: '1rem', padding: '0.5rem 1rem', cursor: 'pointer' }}
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
@@ -49,23 +151,47 @@ function App() {
 
       <div className="container">
         <section className="filter-section">
-          <h2 className="filter-title">Filter by Level</h2>
-          <div className="filter-buttons">
-            <button
-              className={`filter-btn ${selectedLevel === 'all' ? 'active' : ''}`}
-              onClick={() => selectLevel('all')}
-            >
-              All
-            </button>
-            {Object.entries(levelLabels).map(([key, label]) => (
-              <button
-                key={key}
-                className={`filter-btn filter-btn-${key} ${selectedLevel === key ? 'active' : ''}`}
-                onClick={() => selectLevel(key)}
-              >
-                {label}
-              </button>
-            ))}
+          <div className="filter-header">
+            <div>
+              <h2 className="filter-title">Filter by Level</h2>
+              <div className="filter-buttons">
+                <button
+                  className={`filter-btn ${selectedLevel === 'all' ? 'active' : ''}`}
+                  onClick={() => selectLevel('all')}
+                >
+                  All
+                </button>
+                {Object.entries(levelLabels).map(([key, label]) => (
+                  <button
+                    key={key}
+                    className={`filter-btn filter-btn-${key} ${selectedLevel === key ? 'active' : ''}`}
+                    onClick={() => selectLevel(key)}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="time-window-control">
+              <label className="time-window-label">
+                Active Cases Window: <span className="time-window-value">{timeWindow} {timeWindow === 1 ? 'month' : 'months'}</span>
+              </label>
+              <input
+                type="range"
+                min="1"
+                max="3"
+                step="0.5"
+                value={timeWindow}
+                onChange={(e) => setTimeWindow(parseFloat(e.target.value))}
+                className="time-window-slider"
+              />
+              <div className="slider-marks">
+                <span>1mo</span>
+                <span>2mo</span>
+                <span>3mo</span>
+              </div>
+            </div>
           </div>
         </section>
 
@@ -79,28 +205,64 @@ function App() {
             {filteredClinicians.length > 0 && (
               <>
                 <p className="results-subtitle">
-                  Ranked by availability (lowest workload first)
+                  Ranked by availability (lowest assignment score first)
                 </p>
-                <div className="metrics-info">
-                  <div className="formula-header">
-                    <strong>Fair Scoring Formula (Lower = Better):</strong>
+
+                <div className="formula-section">
+                  <div className="formula-intro">
+                    <h3 className="formula-title">How Assignment Scores Work</h3>
+                    <p className="formula-description">
+                      <p>Lower scores indicate better candidates for new assignments.</p> 
+                      <p>Each score is calculated using 4 weighted metrics.</p>
+                    </p>
                   </div>
-                  <div className="formula-grid">
-                    <div className="metric-explanation">
-                      <strong>40% Active Cases</strong> - Current caseload (clients seen in last 2 months)
+
+                  <div className="metrics-grid">
+                    <div className="metric-card">
+                      <div className="metric-header">
+                        <h4 className="metric-title">Active Cases</h4>
+                        <span className="metric-weight">30%</span>
+                      </div>
+                      <p className="metric-description">
+                        Unique clients seen in the last {timeWindow} {timeWindow === 1 ? 'month' : 'months'}
+                      </p>
                     </div>
-                    <div className="metric-explanation">
-                      <strong>25% Current Month</strong> - What's happening RIGHT NOW (Oct 2025)
+
+                    <div className="metric-card">
+                      <div className="metric-header">
+                        <h4 className="metric-title">Current Month</h4>
+                        <span className="metric-weight">30%</span>
+                      </div>
+                      <p className="metric-description">
+                        Clinical hours for {getCurrentMonthName()} {getCurrentYear()}
+                      </p>
                     </div>
-                    <div className="metric-explanation">
-                      <strong>25% 6-Month Trend</strong> - Sustained pattern (May-Oct 2025 average)
+
+                    <div className="metric-card">
+                      <div className="metric-header">
+                        <h4 className="metric-title">6-Month Average</h4>
+                        <span className="metric-weight">30%</span>
+                      </div>
+                      <p className="metric-description">
+                        {get6MonthAverageLabel()}
+                      </p>
                     </div>
-                    <div className="metric-explanation">
-                      <strong>10% Growth Rate</strong> - Workload trajectory (recent vs previous 3 months)
+
+                    <div className="metric-card">
+                      <div className="metric-header">
+                        <h4 className="metric-title">Growth Rate</h4>
+                        <span className="metric-weight">10%</span>
+                      </div>
+                      <p className="metric-description">
+                        Current month vs their historical baseline
+                      </p>
                     </div>
                   </div>
-                  <div className="scoring-note">
-                    Note: Scores are calculated across all clinicians to ensure fairness. Leads with fewer cases will have lower scores than juniors with many cases.
+
+                  <div className="formula-math">
+                    <code className="formula-notation">
+                      S = 100 × [0.30 × (AC/max) + 0.30 × (CM/max) + 0.30 × (M6/max) + 0.10 × ((GR−min)/(max−min))]
+                    </code>
                   </div>
                 </div>
               </>
@@ -126,13 +288,13 @@ function App() {
 
         {filteredClinicians.length > 0 && (
           <section className="graph-section">
-            <WorkloadGraph clinicians={filteredClinicians} />
+            <AssignmentGraph clinicians={filteredClinicians} />
           </section>
         )}
       </div>
 
       <footer className="app-footer">
-        <p>Fair Formula: 40% Active Cases + 25% Current Month + 25% 6-Month Trend + 10% Growth Rate</p>
+        <p>Built for NUS Health and Wellbeing</p>
       </footer>
     </div>
   );

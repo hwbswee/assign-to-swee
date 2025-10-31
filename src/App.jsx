@@ -271,6 +271,20 @@ function App() {
                       S = 100 × [0.30 × (AC/max) + 0.30 × (CM/max) + 0.30 × (M6/max) + 0.10 × ((GR−min)/(max−min))]
                     </code>
                   </div>
+
+                  <div className="protection-systems-info" style={{ marginTop: '2rem', padding: '1rem', background: '#f9fafb', borderRadius: '8px', borderLeft: '4px solid #3b82f6' }}>
+                    <h4 style={{ fontSize: '0.95rem', fontWeight: '600', marginBottom: '0.75rem', color: '#1f2937' }}>
+                      Workload Protection Systems
+                    </h4>
+                    <div style={{ fontSize: '0.875rem', color: '#4b5563', lineHeight: '1.6' }}>
+                      <p style={{ marginBottom: '0.5rem' }}>
+                        <strong>Load Caution:</strong> Points added when a clinician works ≥1.25× their own average for 2+ consecutive months (capped at 45h). Protects against individual burnout.
+                      </p>
+                      <p style={{ marginBottom: 0 }}>
+                        <strong>Load Balancing:</strong> Points added when a clinician is 1.5 standard deviations above the team average for 2+ consecutive months. Uses statistical analysis across all clinicians to identify and protect outliers carrying disproportionate workload.
+                      </p>
+                    </div>
+                  </div>
                 </div>
               </>
             )}

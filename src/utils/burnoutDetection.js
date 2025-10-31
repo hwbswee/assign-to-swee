@@ -71,7 +71,7 @@ export function detectBurnout(monthlyHours, currentMonthIndex) {
     penalty = 10;
   } else if (consecutiveCount === 2) {
     burnoutLevel = 'caution';  // 🟡 Caution
-    penalty = 5;
+    penalty = 3;
   }
 
   return {

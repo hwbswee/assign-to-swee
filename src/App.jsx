@@ -13,14 +13,16 @@ function App() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [timeWindow, setTimeWindow] = useState(2); // Default 2 months
+  const [lastUpdated, setLastUpdated] = useState(null);
 
   // Fetch clinician data from CSV on component mount
   useEffect(() => {
     async function loadData() {
       try {
         setLoading(true);
-        const data = await fetchClinicianData();
-        setCliniciansData(data);
+        const result = await fetchClinicianData();
+        setCliniciansData(result.clinicians);
+        setLastUpdated(result.lastUpdated);
         setError(null);
       } catch (err) {
         setError('Failed to load clinician data. Please refresh the page.');
@@ -94,7 +96,7 @@ function App() {
         <header className="app-header">
           <div className="header-content">
             <div className="header-left">
-              <h1 className="app-title">Assign to Who?</h1>
+              <h1 className="app-title">Assign to who?</h1>
               <p className="app-subtitle">Fair assignment-based recommendations</p>
             </div>
             <Clock />
@@ -116,7 +118,7 @@ function App() {
         <header className="app-header">
           <div className="header-content">
             <div className="header-left">
-              <h1 className="app-title">Assign to Who?</h1>
+              <h1 className="app-title">Assign to who?</h1>
               <p className="app-subtitle">Fair assignment-based recommendations</p>
             </div>
             <Clock />
@@ -142,8 +144,13 @@ function App() {
       <header className="app-header">
         <div className="header-content">
           <div className="header-left">
-            <h1 className="app-title">Assign to Who?</h1>
+            <h1 className="app-title">Assign to who?</h1>
             <p className="app-subtitle">Fair workload-based recommendations</p>
+            {lastUpdated && (
+              <p className="data-timestamp" style={{ fontSize: '0.875rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+                Data last updated: {lastUpdated}
+              </p>
+            )}
           </div>
           <Clock />
         </div>

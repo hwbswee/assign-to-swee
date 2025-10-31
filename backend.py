@@ -113,6 +113,11 @@ monthly_pivot.columns = ['Clinician'] + [f"{col[0]}_{col[1]}" if isinstance(col,
 # Merge active cases into the pivot table
 summary = monthly_pivot.merge(active_cases_active, on='Clinician', how='left')
 
-# Save to CSV
-summary.to_csv('clinician_summary.csv', index=False)
+# Save to CSV with timestamp
+# Add timestamp as a comment line at the top
+timestamp = now.strftime('%d %B %Y')
+with open('clinician_summary.csv', 'w') as f:
+    f.write(f'# Data last updated: {timestamp}\n')
+    summary.to_csv(f, index=False)
 print('\nSummary saved to clinician_summary.csv')
+print(f'Data timestamp: {timestamp}')

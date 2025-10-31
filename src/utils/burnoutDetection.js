@@ -3,6 +3,8 @@
  * Protects against consecutive high-load months (B2B overwork)
  */
 
+import { safeArrayAccess, safeAverage } from './dataValidation.js';
+
 /**
  * Detect consecutive high-load months and calculate burnout risk
  * @param {Array<number>} monthlyHours - Array of monthly hours for current year
@@ -10,18 +12,37 @@
  * @returns {Object} Burnout analysis with penalty and level
  */
 export function detectBurnout(monthlyHours, currentMonthIndex) {
+  // Validate inputs
+  if (!Array.isArray(monthlyHours)) {
+    console.warn('[detectBurnout] Invalid monthlyHours: not an array');
+    return { consecutiveHighMonths: 0, burnoutLevel: 'none', penalty: 0, threshold: 0 };
+  }
+
+  if (currentMonthIndex < 0 || currentMonthIndex >= monthlyHours.length) {
+    console.warn(`[detectBurnout] Invalid currentMonthIndex: ${currentMonthIndex} for array length ${monthlyHours.length}`);
+    return { consecutiveHighMonths: 0, burnoutLevel: 'none', penalty: 0, threshold: 0 };
+  }
+
   // Need at least 3 months of data to detect patterns
   if (currentMonthIndex < 2) {
-    return { consecutiveHighMonths: 0, burnoutLevel: 'none', penalty: 0 };
+    return { consecutiveHighMonths: 0, burnoutLevel: 'none', penalty: 0, threshold: 0 };
   }
 
   // Calculate individual baseline (average of all their months)
-  const validMonths = monthlyHours.slice(0, currentMonthIndex + 1).filter(h => h > 0);
+  // Ensure we don't exceed array bounds
+  const safeEndIndex = Math.min(currentMonthIndex + 1, monthlyHours.length);
+  const monthsToCheck = monthlyHours.slice(0, safeEndIndex);
+  const validMonths = monthsToCheck.filter(h => typeof h === 'number' && !isNaN(h) && h > 0);
+
   if (validMonths.length === 0) {
-    return { consecutiveHighMonths: 0, burnoutLevel: 'none', penalty: 0 };
+    return { consecutiveHighMonths: 0, burnoutLevel: 'none', penalty: 0, threshold: 0 };
   }
 
-  const average = validMonths.reduce((a, b) => a + b, 0) / validMonths.length;
+  const average = safeAverage(validMonths, 'detectBurnout:baseline');
+
+  if (average === 0) {
+    return { consecutiveHighMonths: 0, burnoutLevel: 'none', penalty: 0, threshold: 0 };
+  }
 
   // High-load threshold: individual average + 25%, capped at 45 hours
   // This accounts for both high performers and protects against absolute burnout
@@ -30,7 +51,8 @@ export function detectBurnout(monthlyHours, currentMonthIndex) {
   // Count consecutive high-load months working backwards from current
   let consecutiveCount = 0;
   for (let i = currentMonthIndex; i >= 0; i--) {
-    if (monthlyHours[i] >= highLoadThreshold) {
+    const hours = safeArrayAccess(monthlyHours, i, 0, 'detectBurnout:consecutiveCheck');
+    if (hours >= highLoadThreshold) {
       consecutiveCount++;
     } else {
       break; // Stop at first non-high month

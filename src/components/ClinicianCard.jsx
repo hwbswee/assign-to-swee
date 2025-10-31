@@ -89,7 +89,12 @@ const ClinicianCard = ({ clinician, rank }) => {
           <div className={`protection-warning load-balancing-${loadBalancing.protectionLevel}`}>
             <div className="protection-text">
               <strong>Load Balancing Protection</strong>
-              <span>{loadBalancing.consecutiveHighLoadMonths} consecutive months at 1.5+ SD above mean hours (Protection: +{loadBalancing.penalty} pts)</span>
+              <span>
+                {loadBalancing.consecutiveHighLoadMonths} consecutive months significantly above team average (1.5 standard deviations)
+              </span>
+              <span style={{ fontSize: '0.8em', display: 'block', marginTop: '0.25rem', fontStyle: 'italic' }}>
+                +{loadBalancing.penalty} points added to redistribute workload fairly
+              </span>
             </div>
           </div>
         )}

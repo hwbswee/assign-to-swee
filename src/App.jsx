@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { fetchClinicianData, levelLabels } from './utils/csvParser';
 import { calculateAssignmentScore, getRecommendationLevel, sortByAssignmentScore } from './utils/scoring';
 import { enrichWithAssignmentMetrics } from './utils/assignmentMetrics';
-import { getCurrentMonthName, getCurrentYear, get6MonthAverageLabel } from './utils/dateUtils';
+import { getCurrentMonthName, getPreviousMonthName, getCurrentYear, get6MonthAverageLabel } from './utils/dateUtils';
 import ClinicianCard from './components/ClinicianCard';
 import AssignmentGraph from './components/AssignmentGraph';
 import Clock from './components/Clock';
@@ -40,6 +40,12 @@ function App() {
     if (cliniciansData.length === 0) return [];
 
     const enrichedData = enrichWithAssignmentMetrics(cliniciansData);
+
+    // Check if any clinician is using fallback data
+    const usingFallback = enrichedData.some(c => c.usingPreviousMonthFallback);
+    if (usingFallback && enrichedData.length > 0) {
+      console.log('[App] Some clinicians are using previous month data as fallback');
+    }
 
     // Calculate baseline (2 months) for normalization - FIXED baseline
     // This ensures time window changes have meaningful impact
@@ -84,6 +90,10 @@ function App() {
       : cliniciansWithScores.filter(c => c.level === selectedLevel);
     return sortByAssignmentScore(filtered);
   }, [cliniciansWithScores, selectedLevel]);
+
+  // Check if we're using fallback data for any clinician
+  const usingFallback = cliniciansWithScores.some(c => c.usingPreviousMonthFallback);
+  const dayOfMonth = new Date().getDate();
 
   const selectLevel = (level) => {
     setSelectedLevel(level);
@@ -157,6 +167,21 @@ function App() {
       </header>
 
       <div className="container">
+        {usingFallback && (
+          <div style={{
+            background: '#fef3c7',
+            border: '1px solid #f59e0b',
+            borderRadius: '6px',
+            padding: '0.875rem 1rem',
+            marginBottom: '1.5rem',
+            fontSize: '0.875rem',
+            color: '#92400e'
+          }}>
+            <strong>📅 Early Month Notice:</strong> We're on day {dayOfMonth} of the month. Since current month data is limited,
+            we're using last month's hours as a proxy for "Current Month" workload. This ensures fair assignment scores.
+          </div>
+        )}
+
         <section className="filter-section">
           <div className="filter-header">
             <div>
@@ -241,7 +266,12 @@ function App() {
                         <span className="metric-weight">30%</span>
                       </div>
                       <p className="metric-description">
-                        Clinical hours for {getCurrentMonthName()} {getCurrentYear()}
+                        Clinical hours for {usingFallback ? getPreviousMonthName() : getCurrentMonthName()} {getCurrentYear()}
+                        {usingFallback && (
+                          <span style={{ display: 'block', fontSize: '0.75rem', color: '#f59e0b', marginTop: '0.25rem' }}>
+                            (using last month as proxy)
+                          </span>
+                        )}
                       </p>
                     </div>
 

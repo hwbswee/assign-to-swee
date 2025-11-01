@@ -1,7 +1,7 @@
 import React from 'react';
 
 const ClinicianCard = ({ clinician, rank }) => {
-  const { name, level, currentMonth, sixMonthAverage, growthRate, activeCases, assignmentScore, recommendationLevel, burnout, loadBalancing } = clinician;
+  const { name, level, currentMonth, sixMonthAverage, growthRate, activeCases, assignmentScore, recommendationLevel, burnout, loadBalancing, usingPreviousMonthFallback } = clinician;
 
   const getGrowthIndicator = () => {
     if (growthRate > 10) return { text: '↑ Growing', class: 'growth-up' };
@@ -38,8 +38,13 @@ const ClinicianCard = ({ clinician, rank }) => {
             <span className="stat-label">Active Cases</span>
             <span className="stat-value">{activeCases}</span>
           </div>
-          <div className="stat-item" title="Current month clinical hours (30% weight)">
-            <span className="stat-label">Current Month</span>
+          <div className="stat-item" title={usingPreviousMonthFallback ? "Using last month's hours as proxy (current month data limited)" : "Current month clinical hours (30% weight)"}>
+            <span className="stat-label">
+              Current Month
+              {usingPreviousMonthFallback && (
+                <span style={{ fontSize: '0.6rem', color: '#f59e0b', marginLeft: '0.25rem' }}>*</span>
+              )}
+            </span>
             <span className="stat-value">{currentMonth}h</span>
           </div>
           <div className="stat-item" title="6-month average hours (30% weight)">

@@ -98,6 +98,18 @@ export function getCurrentMonthName() {
 }
 
 /**
+ * Get the previous month name
+ * @returns {string} Full month name (e.g., "September")
+ */
+export function getPreviousMonthName() {
+  const monthNames = ['January', 'February', 'March', 'April', 'May', 'June',
+                      'July', 'August', 'September', 'October', 'November', 'December'];
+  const currentIndex = getCurrentMonthIndex();
+  const previousIndex = currentIndex > 0 ? currentIndex - 1 : 11;
+  return monthNames[previousIndex];
+}
+
+/**
  * Get a date range string (e.g., "May-Oct 2025")
  * @param {number} startMonthIndex - 0-based start month
  * @param {number} endMonthIndex - 0-based end month

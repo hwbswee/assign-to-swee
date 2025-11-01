@@ -37,10 +37,13 @@ export function validateMonthlyHours(monthlyHours, clinicianName = 'Unknown') {
   const currentMonthIndex = getCurrentMonthIndex();
   const expectedLength = currentMonthIndex + 1; // 0-indexed, so add 1
 
-  if (monthlyHours.length < expectedLength) {
+  // Allow for CSV to be 1 month behind (common at start of new month)
+  const minExpectedLength = Math.max(1, expectedLength - 1);
+
+  if (monthlyHours.length < minExpectedLength) {
     errors.push({
       field: 'monthlyHours.length',
-      message: `Monthly hours for ${clinicianName} has ${monthlyHours.length} months, expected at least ${expectedLength}`,
+      message: `Monthly hours for ${clinicianName} has ${monthlyHours.length} months, expected at least ${minExpectedLength}`,
       value: monthlyHours.length
     });
   }
@@ -89,15 +92,19 @@ export function validateCSVStructure(headers) {
     }
   });
 
-  // Check for monthly data columns (should have at least current month)
+  // Check for monthly data columns (should have at least current or previous month)
   const currentYear = getCurrentYear();
   const currentMonthIndex = getCurrentMonthIndex();
   const currentMonthColumn = `${currentYear}_${currentMonthIndex + 1}`;
+  const previousMonthColumn = currentMonthIndex > 0
+    ? `${currentYear}_${currentMonthIndex}`
+    : `${currentYear - 1}_12`;
 
-  if (!headers.includes(currentMonthColumn)) {
+  // Allow either current month or previous month to be present
+  if (!headers.includes(currentMonthColumn) && !headers.includes(previousMonthColumn)) {
     errors.push({
       field: 'headers',
-      message: `Missing current month data column: ${currentMonthColumn}`,
+      message: `Missing recent month data columns: Expected ${currentMonthColumn} or ${previousMonthColumn}`,
       value: headers.join(', ')
     });
   }

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { Info, X } from 'lucide-react';
 import { fetchClinicianData, levelLabels } from './utils/csvParser';
 import { calculateAssignmentScore, getRecommendationLevel, sortByAssignmentScore } from './utils/scoring';
 import { enrichWithAssignmentMetrics } from './utils/assignmentMetrics';
@@ -14,6 +15,7 @@ function App() {
   const [error, setError] = useState(null);
   const [timeWindow, setTimeWindow] = useState(2); // Default 2 months
   const [lastUpdated, setLastUpdated] = useState(null);
+  const [dismissedNotice, setDismissedNotice] = useState(false);
 
   // Fetch clinician data from CSV on component mount
   useEffect(() => {
@@ -167,18 +169,43 @@ function App() {
       </header>
 
       <div className="container">
-        {usingFallback && (
+        {usingFallback && !dismissedNotice && (
           <div style={{
-            background: '#fef3c7',
-            border: '1px solid #f59e0b',
-            borderRadius: '6px',
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: '0.75rem',
+            background: '#fffbeb',
+            border: '1px solid #fde68a',
+            borderRadius: '8px',
             padding: '0.875rem 1rem',
             marginBottom: '1.5rem',
-            fontSize: '0.875rem',
-            color: '#92400e'
+            fontSize: '0.8125rem',
+            color: '#78350f',
+            boxShadow: '0 1px 2px 0 rgba(0, 0, 0, 0.05)'
           }}>
-            <strong>📅 Early Month Notice:</strong> We're on day {dayOfMonth} of the month. Since current month data is limited,
-            we're using last month's hours as a proxy for "Current Month" workload. This ensures fair assignment scores.
+            <Info size={16} style={{ color: '#f59e0b', marginTop: '0.125rem', flexShrink: 0 }} />
+            <div style={{ flex: 1, lineHeight: '1.5' }}>
+              Using <strong>{getPreviousMonthName()}</strong> data for "Current Month" metrics (day {dayOfMonth} of month, current data limited)
+            </div>
+            <button
+              onClick={() => setDismissedNotice(true)}
+              style={{
+                background: 'none',
+                border: 'none',
+                padding: '0.125rem',
+                cursor: 'pointer',
+                color: '#92400e',
+                display: 'flex',
+                alignItems: 'center',
+                opacity: 0.6,
+                transition: 'opacity 0.2s'
+              }}
+              onMouseEnter={(e) => e.currentTarget.style.opacity = '1'}
+              onMouseLeave={(e) => e.currentTarget.style.opacity = '0.6'}
+              title="Dismiss"
+            >
+              <X size={14} />
+            </button>
           </div>
         )}
 

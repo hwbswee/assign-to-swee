@@ -132,6 +132,24 @@ function parseCSV(csvText) {
 }
 
 /**
+ * Find the most recent month column that exists in the CSV headers
+ * @param {Array<string>} headers - CSV headers
+ * @param {number} year - Year to check
+ * @param {number} maxMonth - Maximum month to check (1-12)
+ * @returns {string|null} Most recent available month column or null
+ */
+function findMostRecentMonthColumn(headers, year, maxMonth) {
+  // Start from maxMonth and work backwards to find the most recent available column
+  for (let month = maxMonth; month >= 1; month--) {
+    const columnName = `${year}_${month}`;
+    if (headers.includes(columnName)) {
+      return columnName;
+    }
+  }
+  return null;
+}
+
+/**
  * Fetch and parse clinician_summary.csv with comprehensive validation
  */
 export async function fetchClinicianData() {
@@ -156,6 +174,9 @@ export async function fetchClinicianData() {
       throw new Error(`No valid data could be parsed. Errors: ${errors.map(e => e.message).join('; ')}`);
     }
 
+    // Get CSV headers to check which columns exist
+    const csvHeaders = Object.keys(parsedData[0] || {});
+
     // Transform CSV data into the format expected by the app
     const cliniciansData = [];
     const transformWarnings = [];
@@ -175,9 +196,19 @@ export async function fetchClinicianData() {
         // Extract monthly hours dynamically based on current date
         const currentYear = getCurrentYear();
         const currentMonth = getCurrentMonthIndex() + 1; // 1-based month
+
+        // Find the most recent available month in the CSV
+        const mostRecentColumn = findMostRecentMonthColumn(csvHeaders, currentYear, currentMonth);
+        const mostRecentMonth = mostRecentColumn ? parseInt(mostRecentColumn.split('_')[1], 10) : currentMonth;
+
+        if (mostRecentMonth < currentMonth) {
+          console.warn(`CSV data is not up to date. Current month is ${currentMonth}, but most recent data is for month ${mostRecentMonth}`);
+        }
+
         const monthlyHours2025 = [];
 
-        for (let month = 1; month <= currentMonth; month++) {
+        // Only iterate up to the most recent available month
+        for (let month = 1; month <= mostRecentMonth; month++) {
           const columnName = `${currentYear}_${month}`;
           const hoursRaw = row[columnName];
           const hours = parseFloat(hoursRaw);
@@ -195,13 +226,15 @@ export async function fetchClinicianData() {
           }
         }
 
-        // Get recent hours (most recent month - dynamically calculated)
-        const recentMonthColumn = getCurrentMonthColumn();
+        // Get recent hours (most recent available month)
+        const recentMonthColumn = mostRecentColumn || getCurrentMonthColumn();
         const recentHoursRaw = parseFloat(row[recentMonthColumn]);
         const recentHours = isNaN(recentHoursRaw) || recentHoursRaw < 0 ? 0 : recentHoursRaw;
 
-        // Get previous hours (dynamically calculated)
-        const previousMonthColumn = getPreviousMonthColumn();
+        // Get previous hours (one month before the most recent)
+        const previousMonth = mostRecentMonth > 1 ? mostRecentMonth - 1 : 12;
+        const previousYear = mostRecentMonth > 1 ? currentYear : currentYear - 1;
+        const previousMonthColumn = `${previousYear}_${previousMonth}`;
         const previousHoursRaw = parseFloat(row[previousMonthColumn]);
         const previousHours = isNaN(previousHoursRaw) || previousHoursRaw < 0 ? 0 : previousHoursRaw;
 

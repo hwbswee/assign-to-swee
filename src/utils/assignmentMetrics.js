@@ -47,26 +47,30 @@ export function calculate6MonthAverage(monthlyHours) {
  * Positive = assignment increasing vs their baseline, Negative = assignment decreasing
  * @param {Array<number>} monthlyHours - Array of monthly hours
  * @param {number} currentMonthIndex - Current month index (0-based)
+ * @param {number} effectiveMonthIndex - Effective month index to use (for fallback scenarios)
  * @returns {number} Growth rate as percentage
  */
-export function calculateGrowthRate(monthlyHours, currentMonthIndex) {
+export function calculateGrowthRate(monthlyHours, currentMonthIndex, effectiveMonthIndex = null) {
   if (!Array.isArray(monthlyHours)) {
     console.warn('[calculateGrowthRate] Invalid monthlyHours: not an array');
     return 0;
   }
 
+  // Use effective month index if provided (for fallback scenarios)
+  const monthIndexToUse = effectiveMonthIndex !== null ? effectiveMonthIndex : currentMonthIndex;
+
   // Current month value with bounds checking
   const currentMonth = safeArrayAccess(
     monthlyHours,
-    currentMonthIndex,
+    monthIndexToUse,
     0,
     'calculateGrowthRate:currentMonth'
   );
 
-  // Historical average: last 6 months EXCLUDING current month
+  // Historical average: last 6 months EXCLUDING the month we're using
   // This gives a stable baseline of their typical pattern
-  const historicalStartIndex = Math.max(0, currentMonthIndex - 6);
-  const historicalEndIndex = currentMonthIndex; // Exclusive of current month
+  const historicalStartIndex = Math.max(0, monthIndexToUse - 6);
+  const historicalEndIndex = monthIndexToUse; // Exclusive of the month being compared
 
   // Ensure we don't slice beyond array bounds
   const safeEndIndex = Math.min(historicalEndIndex, monthlyHours.length);
@@ -152,7 +156,9 @@ export function enrichWithAssignmentMetrics(cliniciansData) {
       const sixMonthAvg = calculate6MonthAverage(monthlyHours);
 
       // Growth rate (current month vs individual historical baseline - dynamically calculated)
-      const growthRate = calculateGrowthRate(monthlyHours, currentMonthIndex);
+      // If using fallback, compare previous month to its own historical baseline
+      const effectiveMonthIndex = useFallback ? currentMonthIndex - 1 : currentMonthIndex;
+      const growthRate = calculateGrowthRate(monthlyHours, currentMonthIndex, effectiveMonthIndex);
 
       // Burnout detection (consecutive high-load months)
       const burnoutInfo = detectBurnout(monthlyHours, currentMonthIndex);

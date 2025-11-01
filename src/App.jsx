@@ -272,17 +272,27 @@ function App() {
                     </code>
                   </div>
 
-                  <div className="protection-systems-info" style={{ marginTop: '2rem', padding: '1rem', background: '#f9fafb', borderRadius: '8px', borderLeft: '4px solid #3b82f6' }}>
-                    <h4 style={{ fontSize: '0.95rem', fontWeight: '600', marginBottom: '0.75rem', color: '#1f2937' }}>
-                      Workload Protection Systems
-                    </h4>
-                    <div style={{ fontSize: '0.875rem', color: '#4b5563', lineHeight: '1.6' }}>
-                      <p style={{ marginBottom: '0.5rem' }}>
-                        <strong>Load Caution:</strong> +3 to +15 points added when a clinician works ≥1.25× their own average for 2+ consecutive months (capped at 45h). Protects against individual burnout.
-                      </p>
-                      <p style={{ marginBottom: 0 }}>
-                        <strong>Load Balancing:</strong> Points added when a clinician is 1.5 standard deviations above the team average for 2+ consecutive months. Uses statistical analysis across all clinicians to identify and protect outliers carrying disproportionate workload.
-                      </p>
+                  <div style={{ marginTop: '2.5rem', padding: '1.5rem', background: '#fafafa', border: '1px solid #e5e7eb', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '600', textTransform: 'uppercase', letterSpacing: '0.05em', color: '#6b7280', marginBottom: '1rem' }}>
+                      Protection Systems
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                      <div>
+                        <div style={{ fontSize: '0.875rem', fontWeight: '500', color: '#111827', marginBottom: '0.25rem' }}>
+                          Load Caution
+                        </div>
+                        <div style={{ fontSize: '0.8125rem', color: '#6b7280', lineHeight: '1.5' }}>
+                          +3 points when working ≥1.25× own average for 2+ months (max 45h)
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontSize: '0.875rem', fontWeight: '500', color: '#111827', marginBottom: '0.25rem' }}>
+                          Load Balancing
+                        </div>
+                        <div style={{ fontSize: '0.8125rem', color: '#6b7280', lineHeight: '1.5' }}>
+                          Points added when 1.5 SD above team average for 2+ months
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

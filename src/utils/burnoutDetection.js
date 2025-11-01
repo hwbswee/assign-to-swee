@@ -63,14 +63,8 @@ export function detectBurnout(monthlyHours, currentMonthIndex) {
   let burnoutLevel = 'none';
   let penalty = 0;
 
-  if (consecutiveCount >= 4) {
-    burnoutLevel = 'severe';   // 🔴 Burnout Risk
-    penalty = 15;
-  } else if (consecutiveCount === 3) {
-    burnoutLevel = 'warning';  // 🟠 Warning
-    penalty = 10;
-  } else if (consecutiveCount === 2) {
-    burnoutLevel = 'caution';  // 🟡 Caution
+  if (consecutiveCount >= 2) {
+    burnoutLevel = 'caution';  // 🟡 Load Caution
     penalty = 3;
   }
 

@@ -68,33 +68,23 @@ const ClinicianCard = ({ clinician, rank }) => {
         </div>
 
         {burnout && burnout.burnoutLevel !== 'none' && (
-          <div className={`protection-warning burnout-${burnout.burnoutLevel}`}>
-            <div className="protection-text">
-              <strong>
-                {burnout.burnoutLevel === 'severe' && 'Burnout Risk'}
-                {burnout.burnoutLevel === 'warning' && 'High Load Warning'}
-                {burnout.burnoutLevel === 'caution' && 'Load Caution'}
-              </strong>
-              <span>
-                {burnout.consecutiveHighMonths} consecutive months ≥{burnout.threshold}h (1.25× their avg, capped at 45h)
-              </span>
-              <span style={{ fontSize: '0.8em', display: 'block', marginTop: '0.25rem', fontStyle: 'italic' }}>
-                +{burnout.penalty} points added to protect from overwork
-              </span>
+          <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: '#fef3c7', border: '1px solid #fde68a', borderRadius: '4px' }}>
+            <div style={{ fontSize: '0.8125rem', color: '#92400e', lineHeight: '1.5' }}>
+              <div style={{ fontWeight: '500', marginBottom: '0.25rem' }}>🟡 Load Caution</div>
+              <div style={{ fontSize: '0.75rem', color: '#78350f' }}>
+                {burnout.consecutiveHighMonths} months ≥{burnout.threshold}h • +{burnout.penalty} pts
+              </div>
             </div>
           </div>
         )}
 
         {loadBalancing && loadBalancing.protectionLevel !== 'none' && (
-          <div className={`protection-warning load-balancing-${loadBalancing.protectionLevel}`}>
-            <div className="protection-text">
-              <strong>Load Balancing Protection</strong>
-              <span>
-                {loadBalancing.consecutiveHighLoadMonths} consecutive months significantly above team average (1.5 standard deviations)
-              </span>
-              <span style={{ fontSize: '0.8em', display: 'block', marginTop: '0.25rem', fontStyle: 'italic' }}>
-                +{loadBalancing.penalty} points added to redistribute workload fairly
-              </span>
+          <div style={{ marginTop: '0.75rem', padding: '0.75rem', background: '#dbeafe', border: '1px solid #bfdbfe', borderRadius: '4px' }}>
+            <div style={{ fontSize: '0.8125rem', color: '#1e40af', lineHeight: '1.5' }}>
+              <div style={{ fontWeight: '500', marginBottom: '0.25rem' }}>🔵 Load Balancing</div>
+              <div style={{ fontSize: '0.75rem', color: '#1e3a8a' }}>
+                {loadBalancing.consecutiveHighLoadMonths} months 1.5 SD above avg • +{loadBalancing.penalty} pts
+              </div>
             </div>
           </div>
         )}

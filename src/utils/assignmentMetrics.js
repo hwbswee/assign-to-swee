@@ -102,6 +102,10 @@ export function enrichWithAssignmentMetrics(cliniciansData) {
 
   const currentMonthIndex = getCurrentMonthIndex();
 
+  // Smart fallback logic: use previous month data if we're early in the month
+  const dayOfMonth = new Date().getDate();
+  const isEarlyInMonth = dayOfMonth <= 7;
+
   // First pass: calculate individual metrics
   const enrichedData = cliniciansData.map(clinician => {
     try {
@@ -114,17 +118,35 @@ export function enrichWithAssignmentMetrics(cliniciansData) {
           currentMonth: 0,
           sixMonthAverage: 0,
           growthRate: 0,
-          burnout: { burnoutLevel: 'none', consecutiveMonths: 0, penalty: 0 }
+          burnout: { burnoutLevel: 'none', consecutiveMonths: 0, penalty: 0 },
+          usingPreviousMonthFallback: false
         };
       }
 
       // Current month (dynamically calculated) with bounds checking
-      const currentMonth = safeArrayAccess(
+      const currentMonthRaw = safeArrayAccess(
         monthlyHours,
         currentMonthIndex,
         0,
         `enrichWithAssignmentMetrics:${clinician.name}:currentMonth`
       );
+
+      // Smart fallback: use previous month if we're early in the month and current is low/empty
+      const isCurrentMonthEmpty = currentMonthRaw < 5;
+      const useFallback = isEarlyInMonth && isCurrentMonthEmpty;
+
+      const currentMonth = useFallback
+        ? safeArrayAccess(
+            monthlyHours,
+            currentMonthIndex - 1,
+            0,
+            `enrichWithAssignmentMetrics:${clinician.name}:previousMonth`
+          )
+        : currentMonthRaw;
+
+      if (useFallback) {
+        console.log(`[Smart Fallback] Using previous month data for ${clinician.name} (current: ${currentMonthRaw}h, previous: ${currentMonth}h)`);
+      }
 
       // 6-month average (dynamically calculated)
       const sixMonthAvg = calculate6MonthAverage(monthlyHours);
@@ -140,7 +162,8 @@ export function enrichWithAssignmentMetrics(cliniciansData) {
         currentMonth: Number(currentMonth.toFixed(1)),
         sixMonthAverage: Number(sixMonthAvg.toFixed(1)),
         growthRate: Number(growthRate.toFixed(1)),
-        burnout: burnoutInfo
+        burnout: burnoutInfo,
+        usingPreviousMonthFallback: useFallback
       };
     } catch (error) {
       console.error(`[enrichWithAssignmentMetrics] Error processing ${clinician.name}:`, error);
@@ -149,7 +172,8 @@ export function enrichWithAssignmentMetrics(cliniciansData) {
         currentMonth: 0,
         sixMonthAverage: 0,
         growthRate: 0,
-        burnout: { burnoutLevel: 'none', consecutiveMonths: 0, penalty: 0 }
+        burnout: { burnoutLevel: 'none', consecutiveMonths: 0, penalty: 0 },
+        usingPreviousMonthFallback: false
       };
     }
   });
